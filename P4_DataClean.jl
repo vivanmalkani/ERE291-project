@@ -54,7 +54,7 @@ GRAVITY=9.81 #m/s^2
 
 #Solved from maximum Discharge Rate and maximum passive height.
 TRANSFERRADIUS=0.0973 #m^3
-T=length(WINDENERGY)
+T=30 #length(WINDENERGY)
 TIMESTEP=1 #[hr]
 
 m=Model(solver=AmplNLSolver(joinpath(PATH_TO_SOLVERS,ampl_solver),["outlev=2"]))
@@ -65,7 +65,7 @@ m=Model(solver=AmplNLSolver(joinpath(PATH_TO_SOLVERS,ampl_solver),["outlev=2"]))
 @variable(m,HeightActive[t=1:T]>=0,start=HEIGHTACTIVEMAX)
 @variable(m,GridEnergy[t=1:T]>=0,start=20)
 #@variable(m, SellWindEnergy[t=1:T] >= 0,start=1)
-@variable(m, SaveWindEnergy[t=1:T] >= 0,start=15)
+@variable(m, SaveWindEnergy[t=1:T] >= 0,start=0)
 #@variable(m, StoreWindEnergyOut[t=1:T] >= 0,start=1)
 #@variable(m,InStorage[t=1:T+1] >=0,start=1)
 
@@ -79,7 +79,7 @@ m=Model(solver=AmplNLSolver(joinpath(PATH_TO_SOLVERS,ampl_solver),["outlev=2"]))
 #Need an expression for PumpEnergy
 @NLexpression(m,PumpEnergy[t=1:T],GridEnergy[t]+SaveWindEnergy[t])
 
-@NLexpression(m,ChargeRate[t=1:T],3600*PumpEnergy[t]/(DENSITYWATER*OVERALLPUMPEFFICIENCY*HEADLOSSFRACTION*HEIGHTDROP)) #[m^3/hr]
+@NLexpression(m,ChargeRate[t=1:T],3600*(10^6)*PumpEnergy[t]/(DENSITYWATER*OVERALLPUMPEFFICIENCY*GRAVITY*HEADLOSSFRACTION*HEIGHTDROP)) #[m^3/hr]
 
 #Electricity Generation
 @NLexpression(m,HydroElectricityGen[t=1:T],OVERALLTURBINEEFFICIENCY*DischargeRate[t]*DENSITYWATER*GRAVITY*HEIGHTDROP/(3.6*10^9))
@@ -99,8 +99,8 @@ m=Model(solver=AmplNLSolver(joinpath(PATH_TO_SOLVERS,ampl_solver),["outlev=2"]))
 @NLconstraint(m,[t=1:T-1],HeightActive[t+1]==HeightActive[t]-DischargeRate[t]*TIMESTEP/(STORAGEACTIVEAREA)-ChargeRate[t]*TIMESTEP/(STORAGEACTIVEAREA))
 
 #Water Depth Limits
-@NLconstraint(m,[t=1:T],HeightPassive[t]<=HEIGHTPASSIVEMAX)
-@NLconstraint(m,[t=1:T],HeightPassive[t]>=HEIGHTPASSIVEMIN)
+@NLconstraint(m,[t=1:T],HeightPassive[t]<=HEIGHTPASSIVEMIN)
+@NLconstraint(m,[t=1:T],HeightPassive[t]>=HEIGHTPASSIVEMAX)
 
 @NLconstraint(m,[t=1:T],HeightActive[t]<=HEIGHTACTIVEMAX)
 @NLconstraint(m,[t=1:T],HeightActive[t]>=HEIGHTACTIVEMIN)
