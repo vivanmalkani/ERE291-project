@@ -61,11 +61,11 @@ m=Model(solver=AmplNLSolver(joinpath(PATH_TO_SOLVERS,ampl_solver),["outlev=2"]))
 
 #Note that changing expressions use LowerCase while unchanging parameters are all UpperCase
 
-@variable(m,HeightPassive[t=1:T]>=0,start=5)
-@variable(m,HeightActive[t=1:T]>=0,start=5)
-@variable(m,GridEnergy[t=1:T]>=0,start=1)
+@variable(m,HeightPassive[t=1:T]>=0,start=HEIGHTPASSIVEMAX)
+@variable(m,HeightActive[t=1:T]>=0,start=HEIGHTACTIVEMAX)
+@variable(m,GridEnergy[t=1:T]>=0,start=20)
 #@variable(m, SellWindEnergy[t=1:T] >= 0,start=1)
-@variable(m, SaveWindEnergy[t=1:T] >= 0,start=1)
+@variable(m, SaveWindEnergy[t=1:T] >= 0,start=15)
 #@variable(m, StoreWindEnergyOut[t=1:T] >= 0,start=1)
 #@variable(m,InStorage[t=1:T+1] >=0,start=1)
 
@@ -73,7 +73,7 @@ m=Model(solver=AmplNLSolver(joinpath(PATH_TO_SOLVERS,ampl_solver),["outlev=2"]))
 
 
 #Discharge Rate Equation
-@NLexpression(m,DischargeRate[t=1:T],NUMBERPASSIVE*pi*(TRANSFERRADIUS^2)*DISCHARGECOEFFICIENT*(2*GRAVITY*HeightPassive[t])) #[m^3/hr]
+@NLexpression(m,DischargeRate[t=1:T],3600*NUMBERPASSIVE*pi*(TRANSFERRADIUS^2)*DISCHARGECOEFFICIENT*sqrt(2*GRAVITY*HeightPassive[t])) #[m^3/hr]
 
 #Charge Rate
 #Need an expression for PumpEnergy
@@ -87,9 +87,12 @@ m=Model(solver=AmplNLSolver(joinpath(PATH_TO_SOLVERS,ampl_solver),["outlev=2"]))
 #This fulfills degrees of freedom and the wind energy balance.
 @NLexpression(m,SellWindEnergy[t=1:T],WINDENERGY[t]-SaveWindEnergy[t])
 
+#energy balance constraint
+#@NLconstraint(m, [t = 1:T], (SellWindEnergy[t] + SaveWindEnergy[t] + HydroElectricityGen[t]) >= (GridEnergy[t] + WINDENERGY[t]) )
+
 #Initial Water Depths
-@NLconstraint(m,HeightPassive[1]==HEIGHTPASSIVEMIN)
-@NLconstraint(m,HeightActive[1]==HEIGHTACTIVEMAX)
+@NLconstraint(m,HeightPassive[1]==HEIGHTPASSIVEMAX)
+@NLconstraint(m,HeightActive[1]==HEIGHTACTIVEMIN)
 
 #Water Depth States
 @NLconstraint(m,[t=1:T-1],HeightPassive[t+1]==HeightPassive[t]+DischargeRate[t]*TIMESTEP/(NUMBERPASSIVE*STORAGEPASSIVEAREA)-ChargeRate[t]*TIMESTEP/(NUMBERPASSIVE*STORAGEPASSIVEAREA))
@@ -121,31 +124,50 @@ println("Active Storage Height ",getvalue(HeightActive[1:5]))
 
 ####################################################################
 
-GridEnergyPlot = plot(1:T,
-    getvalue(GridEnergy[1:T]),
-  ylabel = "Grid Energy Purchase (MWh)",
- xlabel = "Time")
-display(GridEnergyPlot)
 
-WindSoldPlot = plot(1:T,
-    getvalue(SellWindEnergy[1:T]),
-   seriestype= :bar,
-  ylabel = "Wind Energy Sold (MWh)",
- xlabel = "Time")
-display(WindSoldPlot)
+PricePlot = plot(1:T,
+data.USD_per_MWh[1:T],
+ylabel = "Price (USD/MWh)",
+ xlabel = "Time",
+ title="Locational Marginal Price",
+ lw = 2)
 
-HeightPassivePlot = plot(1:T,
-        getvalue(HeightPassive[1:T]),
-        seriestype= :bar,
-        ylabel = "Height Passive (m)",
-        xlabel = "Time")
+ HeightPlot = plot(1:T,
+         [getvalue(HeightActive[1:T]), getvalue(HeightPassive[1:T])],
+         ylabel = "Height (m)",
+         xlabel = "Time",
+         label=["Active Reservoir Height" "Passive Reservoir Height"],
+         lw = 2)
 
-display(HeightPassivePlot)
+TimeEnergyPlot = plot(1:T,
+    [ getvalue(GridEnergy[1:T]), getvalue(SaveWindEnergy[1:T]), getvalue(HydroElectricityGen[1:T])],
+  ylabel = "Energy (MWh)",
+ xlabel = "Time",
+ title="Energy Sale and Purchase",
+ label=["Energy Purchased from Grid" "Energy Stored" "Hydro Energy Sold"],
+ lw = 2)
 
-HeightActivePlot = plot(1:T,
-        getvalue(HeightActive[1:T]),
-        seriestype= :bar,
-        ylabel = "Height Active (m)",
-        xlabel = "Time")
+#getvalue(SellWindEnergy[1:T]),
+#"Wind Energy Sold"
 
-display(HeightActivePlot)
+display(plot(TimeEnergyPlot, HeightPlot))
+
+
+
+
+
+#display(HeightPassivePlot)
+
+#HeightActivePlot = plot(1:T,
+#        getvalue(HeightActive[1:T]),
+#        seriestype= :bar,
+#        ylabel = "Height Active (m)",
+#        xlabel = "Time")
+
+
+#WindSoldPlot = plot(1:T,
+#    getvalue(SellWindEnergy[1:T]),
+#   seriestype= :bar,
+#  ylabel = "Wind Energy Sold (MWh)",
+# xlabel = "Time")
+#display(WindSoldPlot)
