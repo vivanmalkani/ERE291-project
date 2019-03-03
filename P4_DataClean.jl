@@ -45,7 +45,7 @@ OVERALLTURBINEEFFICIENCY=0.8 #This includes the Penstock, Maniforld, Nozzle, Run
 OVERALLPUMPEFFICIENCY=0.91 #This reflects waterways losses, pump losses, motor losses, transformer losses.
 STORAGEPASSIVEAREA=151.425 #[m^2]
 HEADLOSSFRACTION=0.95 #Effective height pressure lost from friction in penstock.
-LAGTIME=30 #[s]
+#LAGTIME=30 #[s]
 DISCHARGERATEMAX=2*3600 #[m^3/hr]
 CHARGERATEMAX=2*3600
 DENSITYWATER=1000 #[kg/m^3]
@@ -54,38 +54,41 @@ GRAVITY=9.81 #m/s^2
 
 #Solved from maximum Discharge Rate and maximum passive height.
 TRANSFERRADIUS=0.0973 #m^3
-T=length(WINDENERGY)
+#T=length(WINDENERGY)
+T = 30
 TIMESTEP=1 #[hr]
 
 m=Model(solver=AmplNLSolver(joinpath(PATH_TO_SOLVERS,ampl_solver),["outlev=2"]))
 
 #Note that changing expressions use LowerCase while unchanging parameters are all UpperCase
 
-@variable(m,HeightPassive[t=1:T]>=0,start=5)
-@variable(m,HeightActive[t=1:T]>=0,start=5)
-@variable(m,GridEnergy[t=1:T]>=0,start=1)
+@variable(m,HeightPassive[t=1:T]>=0,start=HEIGHTPASSIVEMIN)
+@variable(m,HeightActive[t=1:T]>=0,start=HEIGHTACTIVEMAX)
+#@variable(m,GridEnergy[t=1:T]>=0,start=1)
 #@variable(m, SellWindEnergy[t=1:T] >= 0,start=1)
-@variable(m, SaveWindEnergy[t=1:T] >= 0,start=1)
+#@variable(m, SaveWindEnergy[t=1:T] >= 0,start=1)
 #@variable(m, StoreWindEnergyOut[t=1:T] >= 0,start=1)
 #@variable(m,InStorage[t=1:T+1] >=0,start=1)
+@variable(m,PumpEnergy[t=1:T]>=0,start=1)
 
 #Radius of Penstock Pipe (transfer radius)
 
 
 #Discharge Rate Equation
-@NLexpression(m,DischargeRate[t=1:T],NUMBERPASSIVE*pi*(TRANSFERRADIUS^2)*DISCHARGECOEFFICIENT*(2*GRAVITY*HeightPassive[t])) #[m^3/hr]
+
+@NLexpression(m,DischargeRate[t=1:T],NUMBERPASSIVE*pi*(TRANSFERRADIUS^2)*DISCHARGECOEFFICIENT*sqrt(2*GRAVITY*HeightPassive[t])*3600) #[m^3/hr]
 
 #Charge Rate
 #Need an expression for PumpEnergy
-@NLexpression(m,PumpEnergy[t=1:T],GridEnergy[t]+SaveWindEnergy[t])
+#@NLexpression(m,PumpEnergy[t=1:T],GridEnergy[t]+SaveWindEnergy[t])
 
-@NLexpression(m,ChargeRate[t=1:T],3600*PumpEnergy[t]/(DENSITYWATER*OVERALLPUMPEFFICIENCY*HEADLOSSFRACTION*HEIGHTDROP)) #[m^3/hr]
+@NLexpression(m,ChargeRate[t=1:T],3600E6*PumpEnergy[t]/(DENSITYWATER*OVERALLPUMPEFFICIENCY*GRAVITY*HEADLOSSFRACTION*HEIGHTDROP*TIMESTEP)) #[m^3/hr]
 
 #Electricity Generation
-@NLexpression(m,HydroElectricityGen[t=1:T],OVERALLTURBINEEFFICIENCY*DischargeRate[t]*DENSITYWATER*GRAVITY*HEIGHTDROP/(3.6*10^9))
+@NLexpression(m,HydroElectricityGen[t=1:T],OVERALLTURBINEEFFICIENCY*DischargeRate[t]*DENSITYWATER*GRAVITY*HEIGHTDROP*TIMESTEP/(3.6*10^9))
 
 #This fulfills degrees of freedom and the wind energy balance.
-@NLexpression(m,SellWindEnergy[t=1:T],WINDENERGY[t]-SaveWindEnergy[t])
+#@NLexpression(m,SellWindEnergy[t=1:T],WINDENERGY[t]-SaveWindEnergy[t])
 
 #Initial Water Depths
 @NLconstraint(m,HeightPassive[1]==HEIGHTPASSIVEMIN)
@@ -108,29 +111,29 @@ m=Model(solver=AmplNLSolver(joinpath(PATH_TO_SOLVERS,ampl_solver),["outlev=2"]))
 #Energy Balance Constraints
 #@NLconstraint(m,[t=1:T],WINDENERGY[t]==SellWindEnergy[t]+SaveWindEnergy[t])
 
-@NLobjective(m,Max,sum(((SellWindEnergy[t]+HydroElectricityGen[t]-GridEnergy[t])*WINDPRICE[t]) for t=1:T))
+@NLobjective(m,Max,sum(((WINDENERGY[t]+HydroElectricityGen[t]-PumpEnergy[t])*WINDPRICE[t]) for t=1:T))
 solve(m)
 
 ###################################################################
 println("Maximized Revenue ",getobjectivevalue(m))
-println("Wind Energy We Sell ",getvalue(SellWindEnergy[1:5]))
+#println("Wind Energy We Sell ",getvalue(SellWindEnergy[1:5]))
 println("Hydro Electricity Sold ",getvalue(HydroElectricityGen[1:5]))
-println("Grid Energy Purchased ",getvalue(GridEnergy[1:5]))
+#println("Grid Energy Purchased ",getvalue(GridEnergy[1:5]))
 println("Passive Storage Height ",getvalue(HeightPassive[1:5]))
 println("Active Storage Height ",getvalue(HeightActive[1:5]))
 
 ####################################################################
 
 GridEnergyPlot = plot(1:T,
-    getvalue(GridEnergy[1:T]),
-  ylabel = "Grid Energy Purchase (MWh)",
+    getvalue(HydroElectricityGen[1:T]),
+  ylabel = "Hydro electricity generation (MWh)",
  xlabel = "Time")
 display(GridEnergyPlot)
 
 WindSoldPlot = plot(1:T,
-    getvalue(SellWindEnergy[1:T]),
+    getvalue(PumpEnergy[1:T]),
    seriestype= :bar,
-  ylabel = "Wind Energy Sold (MWh)",
+  ylabel = "Pump energy used (MWh)",
  xlabel = "Time")
 display(WindSoldPlot)
 
