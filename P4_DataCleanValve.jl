@@ -9,6 +9,7 @@ PATH_TO_SOLVERS = ENV["ERE291_SOLVERS"]
 
 # Boot up packages
 using JuMP
+using Statistics
 using AmplNLWriter
 using Pkg
 using Plots
@@ -141,13 +142,14 @@ daily_data = by(daily_data, :OPR_DT,
 Grid_Energy = :Grid_Energy => sum,
 Hydro_Elec = :Hydro_Elec => sum,
 Wind_Sold = :Wind_Sold => sum,
- Height_Active = :Height_Active => sum,
-  Height_Passive = :Height_Passive => sum)
+ Height_Active = :Height_Active => mean,
+  Height_Passive = :Height_Passive => mean)
 
 PricePlot = plot(1:T,
 data.USD_per_MWh[1:T],
 ylabel = "Price (USD/MWh)",
  xlabel = "Time (Hours)",
+ label = ["Price varying by hour"],
  title="Locational Marginal Price",
  lw = 2)
 
@@ -155,7 +157,7 @@ ylabel = "Price (USD/MWh)",
          [daily_data.Height_Active, daily_data.Height_Passive],
          ylabel = "Height (m)",
          xlabel = "Day of Month (January)",
-         title="Daily Height Trend",
+         title="Daily Average Height Trend",
          label = ["Height (Active)" "Height (Passive)"],
          lw = 2)
 
@@ -166,6 +168,7 @@ EnergyPlot = plot(1:length(daily_data.OPR_DT),
                  title="Daily Energy Transactions",
                  label = ["Grid Energy" "Hydro Electricity" "Wind Energy Sold"],
                  lw = 2)
+
 png(EnergyPlot, "EnergyPlot")
 png(HeightPlot, "HeightPlot")
 png(PricePlot, "PricePlot")
