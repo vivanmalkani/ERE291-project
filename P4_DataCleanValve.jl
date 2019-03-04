@@ -155,6 +155,7 @@ ylabel = "Price (USD/MWh)",
          [daily_data.Height_Active, daily_data.Height_Passive],
          ylabel = "Height (m)",
          xlabel = "Day of Month (January)",
+         title="Daily Height Trend",
          label = ["Height (Active)" "Height (Passive)"],
          lw = 2)
 
@@ -162,6 +163,7 @@ EnergyPlot = plot(1:length(daily_data.OPR_DT),
                  [daily_data.Grid_Energy, daily_data.Hydro_Elec, daily_data.Wind_Sold],
                  ylabel = "Energy (MWh)",
                  xlabel = "Day of Month (January)",
+                 title="Daily Energy Transactions",
                  label = ["Grid Energy" "Hydro Electricity" "Wind Energy Sold"],
                  lw = 2)
 png(EnergyPlot, "EnergyPlot")
