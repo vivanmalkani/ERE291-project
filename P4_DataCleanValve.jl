@@ -128,38 +128,45 @@ println("Active Storage Height ",getvalue(HeightActive[1:j]))
 println("Revenue without storage ", sum(WINDPRICE[t]*WINDENERGY[t] for t=1:T))
 ####################################################################
 
+daily_data = hcat(getvalue(GridEnergy), getvalue(HydroElectricityGen), getvalue(SellWindEnergy), getvalue(HeightActive), getvalue(HeightPassive))
+daily_data = convert(DataFrame, daily_data)
+daily_data = hcat(daily_data, data)
+rename!(daily_data, :x1 => :Grid_Energy)
+rename!(daily_data, :x2 => :Hydro_Elec)
+rename!(daily_data, :x3 => :Wind_Sold)
+rename!(daily_data, :x4 => :Height_Active)
+rename!(daily_data, :x5 => :Height_Passive)
+
+daily_data = by(daily_data, :OPR_DT,
+Grid_Energy = :Grid_Energy => sum,
+Hydro_Elec = :Hydro_Elec => sum,
+Wind_Sold = :Wind_Sold => sum,
+ Height_Active = :Height_Active => sum,
+  Height_Passive = :Height_Passive => sum)
 
 PricePlot = plot(1:T,
 data.USD_per_MWh[1:T],
 ylabel = "Price (USD/MWh)",
- xlabel = "Time",
+ xlabel = "Time (Hours)",
  title="Locational Marginal Price",
  lw = 2)
 
- HeightPlot = plot(1:T,
-         [getvalue(HeightActive[1:T]), getvalue(HeightPassive[1:T])],
+ HeightPlot = plot(1:length(daily_data.OPR_DT),
+         [daily_data.Height_Active, daily_data.Height_Passive],
          ylabel = "Height (m)",
-         xlabel = "Time",
-         label=["Active Reservoir Height" "Passive Reservoir Height"],
+         xlabel = "Day of Month (January)",
+         label = ["Height (Active)" "Height (Passive)"],
          lw = 2)
 
-TimeEnergyPlot = plot(1:T,
-    [ getvalue(GridEnergy[1:T]), getvalue(SaveWindEnergy[1:T]), getvalue(HydroElectricityGen[1:T])],
-  ylabel = "Energy (MWh)",
- xlabel = "Time",
- title="Energy Sale and Purchase",
- label=["Energy Purchased from Grid" "Energy Stored" "Hydro Energy Sold"],
- lw = 2)
-
-#getvalue(SellWindEnergy[1:T]),
-#"Wind Energy Sold"
-HydroEnergyPlot = plot(1:T, getvalue(HydroElectricityGen[1:T]), ylabel = "Hydro electricity generation (MWh)", xlabel = "Time")
-display(HydroEnergyPlot)
-
-
-
-
-display(plot(TimeEnergyPlot, HeightPlot))
+EnergyPlot = plot(1:length(daily_data.OPR_DT),
+                 [daily_data.Grid_Energy, daily_data.Hydro_Elec, daily_data.Wind_Sold],
+                 ylabel = "Energy (MWh)",
+                 xlabel = "Day of Month (January)",
+                 label = ["Grid Energy" "Hydro Electricity" "Wind Energy Sold"],
+                 lw = 2)
+png(EnergyPlot, "EnergyPlot")
+png(HeightPlot, "HeightPlot")
+png(PricePlot, "PricePlot")
 
 
 
