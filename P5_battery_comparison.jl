@@ -1,11 +1,9 @@
 #####################################
-########### P5 Data Clean ###########
+########### P5 Battery Comparison ###########
 #####################################
-####### ADMIN AND PACKAGES ######
 
-# Set path to solvers
-# Replace with appropriate path where I saved solvers in the beginning of the course.
-# Boot up packages
+
+
 using JuMP
 using Clp
 using Statistics
@@ -23,12 +21,19 @@ data = CSV.read("P5_Hatchett.csv")
 WINDENERGY=data[:,4]
 WINDPRICE=data[:,3]
 
+#Capacity of hydro turbines adapted to this battery
 Capacity = 15.9 #MW
+
+#Mox Bogl provided storage limit
 StorageLimit = 70 #MWh
-InitialStorage = 0
+
+#starting off empty
+InitialStorage = StorageLimit
 C_cap = 250000#$/MWh
 #Lifetime constant, MWh lifetime stored into battery per MWh of capacity
 L_c = 3000 #MWh
+
+#Losses from battery storage
 W = 0.0645 #MWh/MWh
 
 #What we plot over, using test case of January
@@ -96,14 +101,14 @@ StorageOut = :StorageOut => sum,
 WindEnergy = :WindEnergy => sum)
 
 
-StoragePlot = plot(1:length(daily_data.date),
+BatteryPlot = plot(1:length(daily_data.date),
                  [daily_data.WindEnergy, daily_data.StorageOut, daily_data.DirectSale],
                  ylabel = "Energy (MWh)",
                  xlabel = "Day of Month (January)",
-                 title="Daily Energy Transactions",
-                 label = ["Wind Energy Available" "Storage Energy Sold" "Direct Sales"],
+                 title="Battery System Comparison",
+                 label = ["Wind Energy Available" "Storage Energy Sold" "Direct Wind Sales"],
                  lw = 2)
 
 
-display(StoragePlot)
-png(StoragePlot, "StoragePlot")
+display(BatteryPlot)
+png(BatteryPlot, "BatteryPlot")
