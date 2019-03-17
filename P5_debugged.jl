@@ -23,7 +23,7 @@ ampl_solver="snopt"
 using CSV
 
 #Import Wind Data (Energy and Price)
-data = CSV.read("P4_test_data_wind_price.csv")
+data = CSV.read("P5_Hatchett.csv")
 
 #display(data)
 #Wind Data
@@ -57,10 +57,10 @@ PENSTOCKRADIUS=0.8 #[m] can range up to 1.25 m.
 PENSTOCKLENGTH=3536 #[m] From Google Earth Estimation of the actual site! Average path traveled by water.
 PENSTOCKROUGHNESS=140 #Unitless, Polyethylene roughness
 
-#What we plot over
-#T=100
-T=length(WINDENERGY)
+#What we plot over, using test case of January
+T= 744
 TIMESTEP=1 #[hr] Everything in terms of hours!
+
 
 m=Model(solver=AmplNLSolver(joinpath(PATH_TO_SOLVERS,ampl_solver),["outlev=2"]))
 
@@ -136,26 +136,26 @@ println("Maximized Revenue ",getobjectivevalue(m))
 #println("Active Storage Height ",getvalue(HeightActive[1:j]))
 #println("Discharge Trend ",getvalue(DischargeFlow))
 #println("Charge Trend ", getvalue(ChargeRate))
-println("Revenue without storage ", sum(WINDPRICE[t]*WINDENERGY[t] for t=1:T))
+println("Revenue Without Storage ", sum(WINDPRICE[t]*WINDENERGY[t] for t=1:T))
 ####################################################################
 
 daily_data = hcat(getvalue(GridEnergy), getvalue(HydroElectricityGen), getvalue(SellWindEnergy), getvalue(HeightActive), getvalue(HeightPassive))
 daily_data = convert(DataFrame, daily_data)
-daily_data = hcat(daily_data, data)
+daily_data = hcat(daily_data, data[1:T,:])
 rename!(daily_data, :x1 => :Grid_Energy)
 rename!(daily_data, :x2 => :Hydro_Elec)
 rename!(daily_data, :x3 => :Wind_Sold)
 rename!(daily_data, :x4 => :Height_Active)
 rename!(daily_data, :x5 => :Height_Passive)
 
-daily_data = by(daily_data, :OPR_DT,
+daily_data = by(daily_data, :date,
 Grid_Energy = :Grid_Energy => sum,
 Hydro_Elec = :Hydro_Elec => sum,
 Wind_Sold = :Wind_Sold => sum,
  Height_Active = :Height_Active => mean,
   Height_Passive = :Height_Passive => mean)
 
-PricePlot = plot(1:T,
+PricePlot_Hatchett = plot(1:T,
 data.USD_per_MWh[1:T],
 ylabel = "Price (USD/MWh)",
  xlabel = "Time (Hours)",
@@ -163,7 +163,7 @@ ylabel = "Price (USD/MWh)",
  title="Locational Marginal Price",
  lw = 2)
 
- HeightPlot = plot(1:length(daily_data.OPR_DT),
+ HeightPlot_Hatchett = plot(1:length(daily_data.date),
          [daily_data.Height_Active, daily_data.Height_Passive],
          ylabel = "Height (m)",
          xlabel = "Day of Month (January)",
@@ -171,7 +171,7 @@ ylabel = "Price (USD/MWh)",
          label = ["Height (Active)" "Height (Passive)"],
          lw = 2)
 
-EnergyPlot = plot(1:length(daily_data.OPR_DT),
+EnergyPlot_Hatchett = plot(1:length(daily_data.date),
                  [daily_data.Grid_Energy, daily_data.Hydro_Elec, daily_data.Wind_Sold],
                  ylabel = "Energy (MWh)",
                  xlabel = "Day of Month (January)",
@@ -179,14 +179,14 @@ EnergyPlot = plot(1:length(daily_data.OPR_DT),
                  label = ["Grid Energy" "Hydro Electricity" "Wind Energy Sold"],
                  lw = 2)
 
-#png(EnergyPlot, "EnergyPlot")
-#png(HeightPlot, "HeightPlot")
-#png(PricePlot, "PricePlot")
+#png(EnergyPlot_Hatchett, "EnergyPlot_Hatchett")
+#png(HeightPlot_Hatchett, "HeightPlot_Hatchett")
+#png(PricePlot_Hatchett, "PricePlot_Hatchett")
 
 
-display(EnergyPlot)
-display(HeightPlot)
-display(PricePlot)
+display(EnergyPlot_Hatchett)
+display(HeightPlot_Hatchett)
+display(PricePlot_Hatchett)
 
 using DelimitedFiles
 check_data = hcat(getvalue(GridEnergy), getvalue(HydroElectricityGen), getvalue(SellWindEnergy), getvalue(HeightActive), getvalue(HeightPassive))
