@@ -179,9 +179,9 @@ EnergyPlot = plot(1:length(daily_data.OPR_DT),
                  label = ["Grid Energy" "Hydro Electricity" "Wind Energy Sold"],
                  lw = 2)
 
-png(EnergyPlot, "EnergyPlot")
-png(HeightPlot, "HeightPlot")
-png(PricePlot, "PricePlot")
+#png(EnergyPlot, "EnergyPlot")
+#png(HeightPlot, "HeightPlot")
+#png(PricePlot, "PricePlot")
 
 
 display(EnergyPlot)
@@ -190,4 +190,4 @@ display(PricePlot)
 
 using DelimitedFiles
 check_data = hcat(getvalue(GridEnergy), getvalue(HydroElectricityGen), getvalue(SellWindEnergy), getvalue(HeightActive), getvalue(HeightPassive))
-writedlm("checkdata.csv",check_data, ',')
+#writedlm("checkdata.csv",check_data, ',')
