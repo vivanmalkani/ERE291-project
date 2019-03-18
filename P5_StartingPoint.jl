@@ -17,7 +17,7 @@ using DataFrames
 
 
 #Now use knitro
-ampl_solver="knitro"
+ampl_solver="snopt"
 
 
 using CSV
@@ -58,19 +58,19 @@ PENSTOCKLENGTH=3536 #[m] From Google Earth Estimation of the actual site! Averag
 PENSTOCKROUGHNESS=140 #Unitless, Polyethylene roughness
 
 #What we plot over
-T=length(WINDENERGY)
+T=744
 TIMESTEP=1 #[hr] Everything in terms of hours!
 
 ##### START THE LOOPS #####
 #Square matrix dimension
-d=20
+d=15
 #Pre-initialize results matrices
 BASEMAXREVENUE=zeros(d,d)
 
 #Change in number initialize
-SaveWindEnergyRange=range(0,stop=50,length=d)
+SaveWindEnergyRange=range(0,stop=30,length=d)
 #Change in radius
-GridEnergyRange=range(0,stop=50,length=d)
+GridEnergyRange=range(0,stop=30,length=d)
 
 for ii=1:d
 StartSaveWindEnergy=SaveWindEnergyRange[ii]
@@ -125,7 +125,7 @@ m=Model(solver=AmplNLSolver(joinpath(PATH_TO_SOLVERS,ampl_solver),["outlev=2"]))
 #@NLconstraint(m,HeightActive[1]==HEIGHTACTIVEMIN)
 
 #Water Depth States
-@NLconstraint(m,[t=1:T-1],HeightPassive[t+1]==HeightPassive[t]+DischargeFlow[t]/(NUMBERPASSIVE*STORAGEPASSIVEAREA)-ChargeRate[t]*TIMESTEP/(NUMBERPASSIVE*STORAGEPASSIVEAREA))
+@NLconstraint(m,[t=1:T-1],HeightPassive[t+1]==HeightPassive[t]-DischargeFlow[t]/(NUMBERPASSIVE*STORAGEPASSIVEAREA)+ChargeRate[t]*TIMESTEP/(NUMBERPASSIVE*STORAGEPASSIVEAREA))
 #@NLconstraint(m,[t=1:T-1],HeightActive[t+1]==HeightActive[t]-DischargeRate[t]*TIMESTEP/(STORAGEACTIVEAREA)-ChargeRate[t]*TIMESTEP/(STORAGEACTIVEAREA))
 
 #Water Depth Limits
